@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Voztok - Widget OBS Ranking</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body { background-color: transparent !important; }
+    </style>
+</head>
+<body class="p-4 overflow-hidden">
+    <div class="w-80 bg-gray-900/90 backdrop-blur-md border border-gray-700/50 rounded-xl shadow-2xl p-4 text-white">
+        <div class="flex items-center justify-between mb-3 border-b border-gray-700 pb-2">
+            <h3 class="text-sm font-bold tracking-wider text-indigo-400 uppercase flex items-center gap-2">
+                <span>🏆</span> Ranking de Actividad
+            </h3>
+        </div>
+        <div id="lista-ranking" class="space-y-2">
+            <div class="text-center py-4 text-gray-400 text-xs italic">Esperando interacciones en vivo...</div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        socket.on('actualizar-ranking-likes', (topLikes) => {
+            const container = document.getElementById('lista-ranking');
+            if (!topLikes || topLikes.length === 0) {
+                container.innerHTML = `<div class="text-center py-4 text-gray-400 text-xs italic">Esperando interacciones en vivo...</div>`;
+                return;
+            }
+
+            container.innerHTML = topLikes.map((item, index) => {
+                let badgeColor = "bg-gray-800 text-gray-300 border-gray-700";
+                let crown = "";
+                if (index === 0) { badgeColor = "bg-amber-500/20 text-amber-300 border-amber-500/50"; crown = "👑"; }
+                else if (index === 1) { badgeColor = "bg-slate-400/20 text-slate-300 border-slate-400/50"; }
+                else if (index === 2) { badgeColor = "bg-amber-700/20 text-amber-500 border-amber-700/50"; }
+
+                return `
+                    <div class="flex items-center justify-between p-2 rounded-lg border ${badgeColor}">
+                        <div class="flex items-center gap-2 overflow-hidden">
+                            <span class="font-bold text-xs w-5 text-center">${crown || `#${index + 1}`}</span>
+                            <span class="font-semibold text-xs truncate max-w-[140px]">${item.user}</span>
+                        </div>
+                        <div class="font-extrabold text-xs text-emerald-400 bg-gray-900/60 px-2 py-1 rounded">
+                            ${item.likes.toLocaleString()}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        });
+    </script>
+</body>
+</html>

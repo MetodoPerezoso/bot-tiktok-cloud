@@ -1,0 +1,14 @@
+{
+    "@mariaeugeniabal": {
+        "activa": true,
+        "expiracion": "2026-11-30"
+    },
+    "juan@gmail.com": {
+        "activa": true,
+        "expiracion": "2026-07-15"
+    },
+    "prueba": {
+        "activa": true,
+        "expiracion": null
+    }
+}

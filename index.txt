@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voztok - TikTok TTS Cloud</title>
+
+    <!-- Configuración PWA para móviles -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('Service Worker registrado con éxito:', reg.scope))
+            .catch(err => console.log('Error al registrar Service Worker:', err));
+        });
+      }
+    </script>
+
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #0f172a; 
+            color: #f8fafc; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            margin: 0; 
+        }
+
+        #loginOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0f172a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+        }
+        .login-card {
+            background: #1e293b;
+            padding: 35px;
+            border-radius: 12px;
+            width: 380px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            border: 1px solid #334155;
+            text-align: center;
+        }
+        
+        .login-logo {
+            width: 75px;
+            height: 75px;
+            border-radius: 16px;
+            object-fit: cover;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+            border: 1px solid #38bdf8;
+        }
+        .login-card h2 { 
+            color: #38bdf8; 
+            margin: 0 0 5px 0; 
+            font-size: 26px;
+        }
+        .login-card p { 
+            font-size: 13px; 
+            color: #94a3b8; 
+            margin-bottom: 25px; 
+        }
+
+        .password-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .password-wrapper input {
+            width: 100%;
+            padding: 12px 45px 12px 12px;
+            font-size: 16px;
+            border-radius: 6px;
+            border: 1px solid #475569;
+            background: #0f172a;
+            color: white;
+            box-sizing: border-box;
+        }
+        .toggle-password {
+            position: absolute;
+            right: 12px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 0;
+            margin: 0;
+            width: auto;
+            color: #94a3b8;
+            transition: color 0.2s;
+        }
+        .toggle-password:hover {
+            color: #38bdf8;
+            background: none;
+        }
+
+        #loginError { color: #ef4444; font-size: 13px; margin-top: 10px; font-weight: bold; }
+
+        #mainApp {
+            display: none;
+            width: 100%;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            max-width: 1350px;
+            width: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        .card { 
+            background: #1e293b; 
+            padding: 25px; 
+            border-radius: 12px; 
+            width: 380px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5); 
+            border: 1px solid #334155;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+
+        /* Columna Central */
+        .columna-central {
+            width: 380px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            flex-shrink: 0;
+        }
+
+        .chat-box {
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            border: 1px solid #334155;
+            display: flex;
+            flex-direction: column;
+            height: 310px;
+            box-sizing: border-box;
+        }
+
+        .ranking-card {
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            border: 1px solid #334155;
+            display: flex;
+            flex-direction: column;
+            height: 230px;
+            box-sizing: border-box;
+        }
+
+        .control-card {
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            border: 1px solid #334155;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+
+        h2, h3 { margin-top: 0; color: #38bdf8; text-align: center; }
+        .form-group { margin-bottom: 15px; text-align: left; }
+        label { display: block; font-size: 15px; margin-bottom: 8px; color: #94a3b8; }
+        input[type="text"], input[type="password"], select { 
+            width: 100%; 
+            padding: 12px; 
+            font-size: 16px; 
+            border-radius: 6px; 
+            border: 1px solid #475569; 
+            background: #0f172a; 
+            color: white; 
+            box-sizing: border-box;
+        }
+        select { cursor: pointer; }
+        input[type="file"] {
+            font-size: 13px;
+            color: #94a3b8;
+            margin-top: 6px;
+            width: 100%;
+            padding: 8px 0;
+        }
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+            accent-color: #fe2c55;
+            height: 8px;
+        }
+        .checkbox-group, .radio-group { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+        .checkbox-group input, .radio-group input { width: 22px; height: 22px; cursor: pointer; }
+        .checkbox-group label, .radio-group label { font-size: 15px; }
+        
+        .filter-section {
+            border-top: 1px solid #334155;
+            margin-top: 12px;
+            padding-top: 12px;
+        }
+        button { 
+            width: 100%; 
+            padding: 14px; 
+            font-size: 17px; 
+            border-radius: 8px; 
+            border: none; 
+            background: #fe2c55; 
+            color: white; 
+            cursor: pointer; 
+            font-weight: bold; 
+            margin-top: 10px;
+            transition: background 0.2s;
+        }
+        button:hover { background: #e0244b; }
+        
+        .btn-test {
+            background: #334155;
+            font-size: 14px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+        .btn-test:hover { background: #475569; }
+
+        .btn-soundboard {
+            background: #334155;
+            font-size: 12px;
+            padding: 8px;
+            border-radius: 6px;
+            border: none;
+            color: white;
+            cursor: pointer;
+            transition: background 0.2s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .btn-soundboard:hover { background: #475569; }
+        .btn-soundboard.play { background: #0284c7; }
+        .btn-soundboard.play:hover { background: #0369a1; }
+
+        #status { margin-top: 10px; font-weight: bold; text-align: center; font-size: 14px; }
+        
+        #infoLicencia {
+            margin-top: 8px;
+            text-align: center;
+            font-size: 11px;
+            color: #38bdf8;
+            border-top: 1px dashed #334155;
+            padding-top: 8px;
+        }
+
+        .footer-brand {
+            text-align: center;
+            margin-top: auto;
+            padding-top: 10px;
+            border-top: 1px dashed #334155;
+            font-size: 12px;
+            color: #64748b;
+        }
+        .footer-brand strong { color: #38bdf8; }
+        .footer-brand a { color: #38bdf8; text-decoration: none; }
+        .footer-brand a:hover { text-decoration: underline; }
+
+        /* Scroll exclusivo del Chat en Vivo */
+        #chatFeed {
+            overflow-y: auto;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding-right: 5px;
+            margin-top: 5px;
+        }
+        .chat-msg {
+            background: #0f172a;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 14px;
+            border-left: 4px solid #fe2c55;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        .chat-msg.alert-msg {
+            border-left-color: #eab308;
+            background: #172033;
+        }
+        .chat-msg strong { color: #38bdf8; }
+        .chat-msg.alert-msg strong { color: #eab308; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 768px) {
+            body { align-items: flex-start; }
+            .container { flex-direction: column; align-items: center; padding: 12px; }
+            .card, .columna-central, .chat-box, .ranking-card, .control-card { width: 100% !important; max-width: 100% !important; box-sizing: border-box; }
+            button { padding: 16px; font-size: 18px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loginOverlay">
+        <div class="login-card">
+            <img src="/icon.png" alt="Voztok Logo" class="login-logo">
+            <h2>Voztok</h2>
+            <p>Método Perezoso™ &bull; Acceso a TikTok TTS</p>
+            
+            <div class="form-group">
+                <div class="password-wrapper">
+                    <input type="password" id="licenseKeyInput" placeholder="Ingresa tu clave de acceso">
+                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility()" title="Ver/Ocultar licencia">
+                        👁️
+                    </button>
+                </div>
+            </div>
+
+            <button onclick="validarLicencia()">Ingresar al Sistema</button>
+            <div id="loginError"></div>
+            
+            <div class="footer-brand" style="margin-top: 25px;">
+                Protegido por licencia exclusiva &copy; 2026
+            </div>
+        </div>
+    </div>
+
+    <div id="mainApp">
+        <div class="container">
+            <!-- PANEL 1: CONFIGURACIÓN GENERAL (IZQUIERDA) -->
+            <div class="card">
+                <h2>🤖 Voztok TTS</h2>
+
+                <div class="form-group">
+                    <label for="idiomaVoz">Acento / Voz Sintética:</label>
+                    <select id="idiomaVoz">
+                        <option value="es">Español General (es)</option>
+                        <option value="es-es">Español de España (es-es)</option>
+                        <option value="en">Inglés (en)</option>
+                    </select>
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" id="leerNombre" checked>
+                    <label for="leerNombre" style="margin-bottom:0; color:#f8fafc; cursor:pointer;">Decir nombre de usuario</label>
+                </div>
+
+                <div class="form-group checkbox-group" style="margin-top: 8px;">
+                    <input type="checkbox" id="leerEmojis">
+                    <label for="leerEmojis" style="margin-bottom:0; color:#f8fafc; cursor:pointer;">Leer emojis</label>
+                </div>
+
+                <div class="filter-section">
+                    <label style="color: #38bdf8; font-weight: bold; margin-bottom: 8px;">Roles Permitidos:</label>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="rolTodos" checked>
+                        <label for="rolTodos" style="margin-bottom:0; cursor:pointer;">Todos los usuarios</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="rolSeguidores" checked>
+                        <label for="rolSeguidores" style="margin-bottom:0; cursor:pointer;">Solo Seguidores</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="rolModeradores">
+                        <label for="rolModeradores" style="margin-bottom:0; cursor:pointer;">Solo Moderadores</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="rolSuscriptores">
+                        <label for="rolSuscriptores" style="margin-bottom:0; cursor:pointer;">Suscriptores / Subscriptores</label>
+                    </div>
+                </div>
+
+                <div class="filter-section">
+                    <label style="color: #38bdf8; font-weight: bold; margin-bottom: 8px;">Tipos de Comentarios:</label>
+                    <div class="radio-group">
+                        <input type="radio" id="tipoTodos" name="tipoComentario" value="todos" checked>
+                        <label for="tipoTodos" style="margin-bottom:0; cursor:pointer;">Cualquier comentario</label>
+                    </div>
+                    <div class="radio-group">
+                        <input type="radio" id="tipoPunto" name="tipoComentario" value="punto">
+                        <label for="tipoPunto" style="margin-bottom:0; cursor:pointer;">Empiezan con punto (.)</label>
+                    </div>
+                    <div class="radio-group">
+                        <input type="radio" id="tipoBarra" name="tipoComentario" value="barra">
+                        <label for="tipoBarra" style="margin-bottom:0; cursor:pointer;">Empiezan con barra (/)</label>
+                    </div>
+                    <div class="radio-group">
+                        <input type="radio" id="tipoComando" name="tipoComentario" value="comando">
+                        <label for="tipoComando" style="margin-bottom:0; cursor:pointer;">Comando personalizado:</label>
+                    </div>
+                    <div class="form-group" style="margin-top: 8px; margin-bottom: 0;">
+                        <input type="text" id="textoComando" value="!tts" placeholder="ej: !tts">
+                    </div>
+                </div>
+
+                <div class="filter-section">
+                    <label style="color: #ef4444; font-weight: bold; margin-bottom: 8px;">🚫 Palabras Prohibidas:</label>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <input type="text" id="palabrasProhibidas" placeholder="Separadas por coma: insulto1, spam">
+                    </div>
+                </div>
+
+                <div class="footer-brand" style="margin-top: 15px;">
+                    Creado por Rodri para<br><strong>Voztok (Método Perezoso™)</strong> &copy; 2026
+                </div>
+            </div>
+
+            <!-- COLUMNA CENTRAL (3 BLOQUES: CHAT, RANKING, CONTROL DINÁMICO) -->
+            <div class="columna-central">
+                <!-- 1. CHAT EN VIVO -->
+                <div class="chat-box">
+                    <h3>💬 Mensajes en Directo</h3>
+                    <div id="chatFeed">
+                        <div class="chat-msg" style="color: #64748b; border-left-color: #475569;">Esperando conexión al directo...</div>
+                    </div>
+                </div>
+
+                <!-- 2. RANKING DE ACTIVIDAD -->
+                <div class="ranking-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <h3 style="margin: 0; font-size: 15px;">🏆 Ranking de Actividad</h3>
+                        <button onclick="reiniciarRanking()" style="width: auto; padding: 3px 8px; font-size: 10px; background: #ef4444; margin-top: 0;">Reiniciar</button>
+                    </div>
+                    <label style="font-size: 10px; color: #94a3b8; margin-bottom: 6px;">OBS Browser Source: <code style="color: #38bdf8;">/widget-likes</code></label>
+
+                    <div style="background: #0f172a; border-radius: 6px; padding: 6px; border: 1px solid #334155; flex-grow: 1; overflow-y: auto;">
+                        <div id="listaRankingPanel" style="font-size: 12px; color: #cbd5e1;">
+                            <div style="text-align: center; color: #64748b; padding: 15px 0;">Esperando actividad...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. TARJETA DE CONTROL: USUARIO, VOLUMEN, MUTE, CONEXIÓN DINÁMICA Y LICENCIA -->
+                <div class="control-card">
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label for="username" style="color: #38bdf8; font-weight: bold;">Usuario de TikTok:</label>
+                        <input type="text" id="username" placeholder="@tu_usuario">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <label for="volumeRange" style="margin-bottom: 0;">Volumen: <span id="volValue">100</span>%</label>
+                            <button id="btnMuteTTS" onclick="toggleMuteTTS()" style="width: auto; padding: 3px 8px; font-size: 11px; background: #334155; margin-top: 0;">🔊 Voz Activa</button>
+                        </div>
+                        <input type="range" id="volumeRange" min="0" max="100" value="100" oninput="actualizarVolumen(this.value)">
+                    </div>
+
+                    <button id="btnConectarBot" onclick="conectarBot()" style="margin-top: 5px;">Conectar Bot</button>
+                    <div id="status">Estado: Desconectado 🔴</div>
+                    
+                    <div id="infoLicencia">🔑 Licencia Activa</div>
+                </div>
+            </div>
+
+            <!-- PANEL 3: ALERTAS Y SONIDOS (DERECHA) -->
+            <div class="card">
+                <h2>⚡ Alertas y Sonidos</h2>
+                
+                <div class="filter-section" style="border-top: none; margin-top: 0; padding-top: 0;">
+                    <label style="color: #eab308; font-weight: bold; margin-bottom: 8px;">🔊 Alerta de Seguidores:</label>
+                    <div class="checkbox-group" style="margin-bottom: 8px;">
+                        <input type="checkbox" id="alertaFollow" checked>
+                        <label for="alertaFollow" style="margin-bottom:0; cursor:pointer;">Activar voz de seguidor</label>
+                    </div>
+                    <label style="font-size:13px; color:#94a3b8; margin-top:6px;">Audio personalizado (MP3/WAV):</label>
+                    <input type="file" id="soundFollow" accept="audio/*">
+                    <button class="btn-test" onclick="probarAlerta('follow')">🧪 Probar Seguidor</button>
+
+                    <label style="color: #eab308; font-weight: bold; margin-top: 18px; margin-bottom: 8px;">🎁 Alerta de Regalos:</label>
+                    <div class="checkbox-group" style="margin-bottom: 8px;">
+                        <input type="checkbox" id="alertaGift" checked>
+                        <label for="alertaGift" style="margin-bottom:0; cursor:pointer;">Activar voz de regalo</label>
+                    </div>
+                    <label style="font-size:13px; color:#94a3b8; margin-top:6px;">Audio personalizado (MP3/WAV):</label>
+                    <input type="file" id="soundGift" accept="audio/*">
+                    <button class="btn-test" onclick="probarAlerta('gift')">🧪 Probar Regalo</button>
+                </div>
+
+                <!-- SOUNDBOARD -->
+                <div class="filter-section" style="margin-top: 12px;">
+                    <label style="color: #38bdf8; font-weight: bold; margin-bottom: 4px;">🎛️ Soundboard (Atajos: Teclas 1-6):</label>
+                    <label style="font-size: 11px; color: #94a3b8; margin-bottom: 8px;">Presiona del 1 al 6 en tu teclado para disparar.</label>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                        <button class="btn-soundboard play" onclick="reproducirEfectoDirecto('sound1')">🔊 [1] Sonido 1</button>
+                        <button class="btn-soundboard" onclick="probarEfectoDirecto('sound1')">⚙️ Cargar 1</button>
+                        <button class="btn-soundboard play" onclick="reproducirEfectoDirecto('sound2')">🔊 [2] Sonido 2</button>
+                        <button class="btn-soundboard" onclick="probarEfectoDirecto('sound2')">⚙️ Cargar 2</button>
+                        <button class="btn-soundboard play" onclick="reproducirEfectoDirecto('sound3')">🔊 [3] Sonido 3</button>
+                        <button class="btn-soundboard" onclick="probarEfectoDirecto('sound3')">⚙️ Cargar 3</button>
+                        <button class="btn-soundboard play" onclick="reproducirEfectoDirecto('sound4')">🔊 [4] Sonido 4</button>
+                        <button class="btn-soundboard" onclick="probarEfectoDirecto('sound4')">⚙️ Cargar 4</button>
+                        <button class="btn-soundboard play" onclick="reproducirEfectoDirecto('sound5')">🔊 [5] Sonido 5</button>
+                        <button class="btn-soundboard" onclick="probarEfectoDirecto('sound5')">⚙️ Cargar 5</button>
+                    </div>
+
+                    <input type="file" id="sound1" accept="audio/*" style="display:none;">
+                    <input type="file" id="sound2" accept="audio/*" style="display:none;">
+                    <input type="file" id="sound3" accept="audio/*" style="display:none;">
+                    <input type="file" id="sound4" accept="audio/*" style="display:none;">
+                    <input type="file" id="sound5" accept="audio/*" style="display:none;">
+                </div>
+
+                <div class="footer-brand" style="margin-top: 15px;">
+                    Sounds provided by <a href="https://www.myinstants.com" target="_blank">MyInstants.com</a><br>
+                    Optimizado para streaming profesional.
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io({
+            reconnection: true,
+            reconnectionAttempts: Infinity,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            timeout: 20000
+        });
+
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") {
+                if (!socket.connected) {
+                    socket.connect();
+                }
+            }
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.target.tagName === 'INPUT' || event.target.tagName === 'SELECT' || event.target.tagName === 'TEXTAREA') {
+                return;
+            }
+
+            if (event.key === '1') reproducirEfectoDirecto('sound1');
+            else if (event.key === '2') reproducirEfectoDirecto('sound2');
+            else if (event.key === '3') reproducirEfectoDirecto('sound3');
+            else if (event.key === '4') reproducirEfectoDirecto('sound4');
+            else if (event.key === '5') reproducirEfectoDirecto('sound5');
+            else if (event.key === '6') reproducirEfectoDirecto('sound6');
+        });
+
+        let currentLicenseKey = '';
+        let colaAudios = [];
+        let estaReproduciendoAudio = false;
+        let volumenGlobal = 1.0;
+        let ttsSilenciado = false;
+        let estaConectadoBot = false;
+
+        function togglePasswordVisibility() {
+            const inputKey = document.getElementById('licenseKeyInput');
+            const btnToggle = document.querySelector('.toggle-password');
+            if (inputKey.type === 'password') {
+                inputKey.type = 'text';
+                btnToggle.innerText = '🙈';
+            } else {
+                inputKey.type = 'password';
+                btnToggle.innerText = '👁️';
+            }
+        }
+
+        function validarLicencia() {
+            const key = document.getElementById('licenseKeyInput').value.trim();
+            const errorDiv = document.getElementById('loginError');
+            if (!key) {
+                errorDiv.innerText = "Por favor ingresa una clave de acceso.";
+                return;
+            }
+            errorDiv.innerText = "Validando licencia...";
+            socket.emit('validar-licencia', { key: key });
+        }
+
+        socket.on('respuesta-licencia', (data) => {
+            if (data.valida) {
+                currentLicenseKey = data.key;
+                document.getElementById('loginOverlay').style.display = 'none';
+                document.getElementById('mainApp').style.display = 'flex';
+                
+                if (data.expiracion) {
+                    document.getElementById('infoLicencia').innerText = `🔑 ${data.expiracion}`;
+                }
+            } else {
+                document.getElementById('loginError').innerText = data.mensaje || "Clave de acceso inválida o vencida.";
+            }
+        });
+
+        socket.on('sesion-expulsada', (data) => {
+            alert(data.mensaje || "Tu clave de acceso fue abierta en otro dispositivo.");
+            location.reload();
+        });
+
+        function actualizarVolumen(valor) {
+            document.getElementById('volValue').innerText = valor;
+            volumenGlobal = valor / 100;
+        }
+
+        function toggleMuteTTS() {
+            ttsSilenciado = !ttsSilenciado;
+            const btn = document.getElementById('btnMuteTTS');
+            if (ttsSilenciado) {
+                btn.innerText = "🔇 Muteado";
+                btn.style.background = "#ef4444";
+                colaAudios = [];
+            } else {
+                btn.innerText = "🔊 Voz Activa";
+                btn.style.background = "#334155";
+            }
+        }
+
+        function obtenerArchivoBase64(inputId) {
+            return new Promise((resolve) => {
+                const fileInput = document.getElementById(inputId);
+                if (fileInput.files && fileInput.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) { resolve(e.target.result); };
+                    reader.readAsDataURL(fileInput.files[0]);
+                } else {
+                    resolve(null);
+                }
+            });
+        }
+
+        async function conectarBot() {
+            const btnConectar = document.getElementById('btnConectarBot');
+
+            if (estaConectadoBot) {
+                socket.emit('desconectar-bot');
+                resetearEstadoBot();
+                return;
+            }
+
+            let user = document.getElementById('username').value.trim();
+            if (!user) {
+                alert("Por favor ingresa un usuario válido");
+                return;
+            }
+
+            if (!user.startsWith('@')) user = '@' + user;
+
+            let idiomaVoz = document.getElementById('idiomaVoz').value;
+            let leerNombre = document.getElementById('leerNombre').checked;
+            let leerEmojis = document.getElementById('leerEmojis').checked;
+            
+            let roles = {
+                todos: document.getElementById('rolTodos').checked,
+                seguidores: document.getElementById('rolSeguidores').checked,
+                moderadores: document.getElementById('rolModeradores').checked,
+                suscriptores: document.getElementById('rolSuscriptores').checked
+            };
+
+            let tipoComentario = document.querySelector('input[name="tipoComentario"]:checked').value;
+            let textoComando = document.getElementById('textoComando').value.trim();
+
+            let inputProhibidas = document.getElementById('palabrasProhibidas').value.trim();
+            let listaProhibidas = inputProhibidas 
+                ? inputProhibidas.split(',').map(p => p.trim()).filter(p => p.length > 0)
+                : [];
+
+            let soundFollowBase64 = await obtenerArchivoBase64('soundFollow');
+            let soundGiftBase64 = await obtenerArchivoBase64('soundGift');
+
+            let alertas = {
+                follow: document.getElementById('alertaFollow').checked,
+                gift: document.getElementById('alertaGift').checked,
+                soundFollow: soundFollowBase64,
+                soundGift: soundGiftBase64
+            };
+
+            document.getElementById('status').innerText = "Estado: Conectando... 🟡";
+            
+            socket.emit('configurar-usuario', { 
+                licenseKey: currentLicenseKey,
+                username: user, 
+                idiomaVoz: idiomaVoz,
+                leerNombre: leerNombre,
+                leerEmojis: leerEmojis,
+                roles: roles,
+                tipoComentario: tipoComentario,
+                textoComando: textoComando,
+                palabrasProhibidas: listaProhibidas,
+                alertas: alertas
+            });
+        }
+
+        function resetearEstadoBot() {
+            estaConectadoBot = false;
+            const btn = document.getElementById('btnConectarBot');
+            btn.innerText = "Conectar Bot";
+            btn.style.background = "#fe2c55";
+            document.getElementById('status').innerText = "Estado: Desconectado 🔴";
+        }
+
+        async function probarAlerta(tipo) {
+            let soundBase64 = await obtenerArchivoBase64(tipo === 'follow' ? 'soundFollow' : 'soundGift');
+            let idiomaVoz = document.getElementById('idiomaVoz').value;
+            socket.emit('probar-alerta', { tipo: tipo, customSound: soundBase64, idioma: idiomaVoz });
+        }
+
+        function probarEfectoDirecto(idInput) {
+            document.getElementById(idInput).click();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            for (let i = 1; i <= 6; i++) {
+                const savedAudio = localStorage.getItem(`soundboard_audio_${i}`);
+                const savedName = localStorage.getItem(`soundboard_name_${i}`);
+
+                if (savedAudio && savedName) {
+                    window[`audioBase64_${i}`] = savedAudio;
+                    const botones = document.querySelectorAll('.btn-soundboard');
+                    const indexBotonCargar = (i * 2) - 1;
+                    if (botones[indexBotonCargar]) {
+                        botones[indexBotonCargar].innerText = `📁 ${savedName}`;
+                    }
+                }
+            }
+
+            for (let i = 1; i <= 6; i++) {
+                const input = document.getElementById(`sound${i}`);
+                if (input) {
+                    input.addEventListener('change', function() {
+                        if (this.files && this.files[0]) {
+                            const file = this.files[0];
+                            const nombreOriginal = file.name;
+                            const nombreCorto = nombreOriginal.length > 14 ? nombreOriginal.substring(0, 12) + '...' : nombreOriginal;
+                            
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                const base64Result = e.target.result;
+                                localStorage.setItem(`soundboard_audio_${i}`, base64Result);
+                                localStorage.setItem(`soundboard_name_${i}`, nombreCorto);
+                                window[`audioBase64_${i}`] = base64Result;
+                                
+                                const botones = document.querySelectorAll('.btn-soundboard');
+                                const indexBotonCargar = (i * 2) - 1;
+                                if (botones[indexBotonCargar]) {
+                                    botones[indexBotonCargar].innerText = `📁 ${nombreCorto}`;
+                                }
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    });
+                }
+            }
+        });
+
+        async function reproducirEfectoDirecto(idInput) {
+            const canalNum = idInput.replace('sound', '');
+            let soundBase64 = window[`audioBase64_${canalNum}`] || await obtenerArchivoBase64(idInput);
+
+            if (!soundBase64) {
+                alert("Primero selecciona un archivo de audio para este canal.");
+                return;
+            }
+            socket.emit('reproducir-efecto-rapido', { customSound: soundBase64 });
+        }
+
+        socket.on('estado-conexion', (data) => {
+            if (data.status === 'conectado') {
+                estaConectadoBot = true;
+                const btn = document.getElementById('btnConectarBot');
+                btn.innerText = "Desconectar Bot";
+                btn.style.background = "#334155";
+                document.getElementById('status').innerText = "Estado: Conectado 🟢";
+                document.getElementById('chatFeed').innerHTML = '<div class="chat-msg" style="color: #38bdf8; border-left-color: #38bdf8;">Conectado correctamente al chat y alertas.</div>';
+            } else if (data.status === 'desconectado') {
+                resetearEstadoBot();
+            } else {
+                resetearEstadoBot();
+                document.getElementById('status').innerText = "Estado: Error de conexión ❌";
+            }
+        });
+
+        // Actualizar el Ranking de Actividad
+        socket.on('actualizar-ranking-likes', (topLikes) => {
+            const container = document.getElementById('listaRankingPanel');
+            if (!container) return;
+
+            if (!topLikes || topLikes.length === 0) {
+                container.innerHTML = `<div style="text-align: center; color: #64748b; padding: 15px 0;">Esperando actividad...</div>`;
+                return;
+            }
+
+            container.innerHTML = topLikes.map((item, index) => `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #1e293b;">
+                    <span><strong style="color: #38bdf8;">#${index + 1}</strong> ${item.user}</span>
+                    <span style="color: #4ade80; font-weight: bold;">${item.likes.toLocaleString()}</span>
+                </div>
+            `).join('');
+        });
+
+        function reiniciarRanking() {
+            fetch('/api/reset-likes', { method: 'POST' })
+                .then(res => res.json())
+                .then(() => console.log('Ranking reiniciado'));
+        }
+
+        socket.off('reproducir-audio');
+        socket.on('reproducir-audio', (data) => {
+            if (!data) return;
+
+            if (!ttsSilenciado) {
+                if (data.soundUrl) {
+                    colaAudios.push({ url: data.soundUrl, isCustomSound: true });
+                }
+
+                if (data.audioUrl) {
+                    colaAudios.push({ url: data.audioUrl, isCustomSound: false });
+                }
+            }
+
+            const chatFeed = document.getElementById('chatFeed');
+            
+            if (chatFeed.children.length === 1 && chatFeed.children[0].innerText.includes('Esperando')) {
+                chatFeed.innerHTML = '';
+            }
+
+            if (data.mensaje) {
+                const divMsg = document.createElement('div');
+                divMsg.className = data.esAlerta ? 'chat-msg alert-msg' : 'chat-msg';
+                divMsg.innerHTML = `<strong>${data.usuario || 'Sistema'}:</strong> ${data.mensaje}`;
+                chatFeed.appendChild(divMsg);
+                chatFeed.scrollTop = chatFeed.scrollHeight;
+            }
+
+            if (!ttsSilenciado) {
+                procesarColaAudios();
+            }
+        });
+
+        function procesarColaAudios() {
+            if (ttsSilenciado || estaReproduciendoAudio || colaAudios.length === 0) return;
+
+            estaReproduciendoAudio = true;
+            const itemAudio = colaAudios.shift();
+
+            const audio = new Audio(itemAudio.url);
+            audio.volume = volumenGlobal;
+
+            audio.play().catch(err => {
+                console.log("Error al reproducir audio:", err);
+                siguienteAudio();
+            });
+
+            audio.onended = () => {
+                siguienteAudio();
+            };
+        }
+
+        function siguienteAudio() {
+            estaReproduciendoAudio = false;
+            setTimeout(procesarColaAudios, 100);
+        }
+    </script>
+</body>
+</html>
